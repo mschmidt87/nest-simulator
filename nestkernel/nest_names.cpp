@@ -45,6 +45,12 @@ const Name autapses( "autapses" );
 const Name b( "b" );
 const Name beta( "beta" );
 const Name binary( "binary" );
+const Name BW_k("BW_k");
+const Name BW_gamma("BW_gamma");
+const Name BW_tau("BW_tau");
+const Name BW_alpha("BW_alpha");
+const Name BW_rho("BW_rho");
+const Name BW_V0("BW_V0");
 
 const Name c( "c" );
 const Name c_1( "c_1" );

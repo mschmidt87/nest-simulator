@@ -57,6 +57,12 @@ extern const Name autapses;        //!< Connectivity-related
 extern const Name b;      //!< Specific to Brette & Gerstner 2005 (aeif_cond-*)
 extern const Name beta;   //!< Specific to amat2_*
 extern const Name binary; //!< Recorder parameter
+extern const Name BW_k;
+extern const Name BW_gamma;
+extern const Name BW_tau;
+extern const Name BW_alpha;
+extern const Name BW_rho;
+extern const Name BW_V0;
 
 extern const Name c;                    //!< Specific to Izhikevich 2003
 extern const Name c_1;                  //!< Specific to stochastic neuron pp_psc_delta
