@@ -212,7 +212,7 @@ namespace nest
     struct State_ {
       
       //! Symbolic indices to the elements of the state vector y
-      enum StateVecElems { BW_S, BW_F, BW_V, BW_Q , V_M,
+      enum StateVecElems { BW_S, BW_F, BW_V, BW_Q , V_M, BW_Z ,
 			   STATE_VEC_SIZE };
 
       //! state vector, must be C-array for GSL solver

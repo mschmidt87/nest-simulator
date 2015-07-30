@@ -81,7 +81,7 @@ inline int nest::balloon_windkessel_dynamics(double, const double y[], double f[
   // not the state vector in the node, node.S_.y[]. 
 
   // dBW_S/dt
-  f[0] = 0.001-node.P_.BW_k*y[S::BW_S] - node.P_.BW_gamma*(y[S::BW_F]-1.0);
+  f[0] = y[S::BW_Z] -node.P_.BW_k*y[S::BW_S] - node.P_.BW_gamma*(y[S::BW_F]-1.0);
 
   // dBW_F/dt
   f[1] = y[S::BW_S]; 
@@ -97,6 +97,9 @@ inline int nest::balloon_windkessel_dynamics(double, const double y[], double f[
 
   // dV_m/dt dummy for bold signal
   f[4] = 0;
+
+  // dBW_Z/dt dummy for input signal
+  f[5] = 0;
 
   return GSL_SUCCESS;
  }
@@ -299,6 +302,11 @@ void nest::balloon_windkessel::update(Time const & origin, const long_t from, co
     // enforce setting IntegrationStep to step-t; this is of advantage
     // for a consistent and efficient integration across subsequent
     // simulation intervals
+
+    // add incoming spikes
+    S_.y[State_::BW_Z] = B_.spike_exc_.get_value(lag)/Time::get_resolution().get_ms();
+    S_.y[State_::BW_Z] += B_.spike_inh_.get_value(lag)/Time::get_resolution().get_ms();
+
     while ( t < B_.step_ )
     { 
       const int status = gsl_odeiv_evolve_apply(B_.e_, B_.c_, B_.s_, 
@@ -320,10 +328,6 @@ void nest::balloon_windkessel::update(Time const & origin, const long_t from, co
     					+ (2.0*P_.BW_rho-0.2)*(1.0-S_.y[State_::BW_V])
     				   );
     
-    // add incoming spikes
-    //S_.y[State_::BW_S] += B_.spike_exc_.get_value(lag);
-    //S_.y[State_::BW_S] -= B_.spike_inh_.get_value(lag);
-
     // log state data
     B_.logger_.record_data(origin.get_steps() + lag);
   }
@@ -335,10 +339,10 @@ void nest::balloon_windkessel::handle(SpikeEvent & e)
 
   if(e.get_weight() > 0.0)
     B_.spike_exc_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
-			 e.get_weight() * e.get_multiplicity() );
+			    e.get_weight() * e.get_multiplicity() );
   else
     B_.spike_inh_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
-			 -e.get_weight() * e.get_multiplicity() );  // ensure conductance is positive
+			 e.get_weight() * e.get_multiplicity() );  // inh. spikes are counted just like exc. spikes
 }
 
 void nest::balloon_windkessel::handle(CurrentEvent& e)
