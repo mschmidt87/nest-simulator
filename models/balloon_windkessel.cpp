@@ -114,7 +114,8 @@ nest::balloon_windkessel::Parameters_::Parameters_()
     BW_tau  (980.0       ),  // ms
     BW_alpha(0.32        ),  // dimensionless
     BW_rho  (0.34        ),  // dimensionless
-    BW_V0   (0.02        )   // dimensionless
+    BW_V0   (0.02        ),   // dimensionless
+    N_conn  (0           )
     
 {
 }
@@ -304,8 +305,8 @@ void nest::balloon_windkessel::update(Time const & origin, const long_t from, co
     // simulation intervals
 
     // add incoming spikes
-    S_.y[State_::BW_Z] = B_.spike_exc_.get_value(lag)/Time::get_resolution().get_ms();
-    S_.y[State_::BW_Z] += B_.spike_inh_.get_value(lag)/Time::get_resolution().get_ms();
+    S_.y[State_::BW_Z] = B_.spike_exc_.get_value(lag)/Time::get_resolution().get_ms()/P_.N_conn;
+    S_.y[State_::BW_Z] += B_.spike_inh_.get_value(lag)/Time::get_resolution().get_ms()/P_.N_conn;
 
     while ( t < B_.step_ )
     { 

@@ -189,6 +189,9 @@ namespace nest
 	double_t BW_alpha;
 	double_t BW_rho;
 	double_t BW_V0;
+
+      // store number of incoming connections
+      long_t N_conn;
   
       Parameters_();        //!< Set default parameter values
 
@@ -337,6 +340,10 @@ balloon_windkessel::handles_test_event( SpikeEvent&, rport receptor_type )
 {
   if ( receptor_type != 0 )
     throw UnknownReceptorType( receptor_type, get_name() );
+
+  Parameters_ ptmp = P_;
+  ptmp.N_conn += 1;
+  P_ = ptmp;
   return 0;
 }
 
