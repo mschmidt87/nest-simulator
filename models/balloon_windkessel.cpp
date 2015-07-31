@@ -336,9 +336,8 @@ void nest::balloon_windkessel::update(Time const & origin, const long_t from, co
 void nest::balloon_windkessel::handle(SpikeEvent & e)
 {
   assert(e.get_delay() > 0);
-
   if(e.get_weight() > 0.0)
-    B_.spike_exc_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
+    B_.spike_exc_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()) - e.get_delay()+ Scheduler::get_min_delay(), // ignore synaptic delay
 			    e.get_weight() * e.get_multiplicity() );
   else
     B_.spike_inh_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
