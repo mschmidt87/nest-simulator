@@ -1,5 +1,5 @@
 /*
- *  iaf_cond_alpha.cpp
+ *  bold_detector.cpp
  *
  *  This file is part of NEST.
  *
@@ -20,48 +20,17 @@
  *
  */
 
-
-#include "balloon_windkessel.h"
-
-#ifdef HAVE_GSL
-
-#include "exceptions.h"
+#include "bold_detector.h"
 #include "network.h"
 #include "dict.h"
 #include "integerdatum.h"
 #include "doubledatum.h"
 #include "dictutils.h"
-#include "numerics.h"
-#include "universal_data_logger_impl.h"
-#include <limits>
+#include "arraydatum.h"
+#include "sibling_container.h"
 
-#include <iomanip>
-#include <iostream>
-#include <cstdio>
+#include <numeric>
 
-/* ---------------------------------------------------------------- 
- * Recordables map
- * ---------------------------------------------------------------- */
-
-nest::RecordablesMap<nest::balloon_windkessel> nest::balloon_windkessel::recordablesMap_;
-
-namespace nest   // template specialization must be placed in namespace
-{
-  /*
-   * Override the create() method with one call to RecordablesMap::insert_() 
-   * for each quantity to be recorded.
-   */
-  template <>
-  void RecordablesMap<balloon_windkessel>::create()
-  {
-    // use standard names whereever you can for consistency!
-
-    insert_(names::V_m, 
-    	    &balloon_windkessel::get_y_elem_<balloon_windkessel::State_::V_M>);
-    insert_(names::t_ref_remaining, 
-	    &balloon_windkessel::get_r_);
-  }
-}
 
 /* ---------------------------------------------------------------- 
  * Iteration function
@@ -71,11 +40,11 @@ extern "C"
 inline int nest::balloon_windkessel_dynamics(double, const double y[], double f[], void* pnode)
 { 
   // a shorthand
-  typedef nest::balloon_windkessel::State_ S;
+  typedef nest::bold_detector::State_ S;
 
   // get access to node so we can almost work as in a member function
   assert(pnode);
-  const nest::balloon_windkessel& node =  *(reinterpret_cast<nest::balloon_windkessel*>(pnode));
+  const nest::bold_detector& node =  *(reinterpret_cast<nest::bold_detector*>(pnode));
 
   // y[] here is---and must be---the state vector supplied by the integrator,
   // not the state vector in the node, node.S_.y[]. 
@@ -108,7 +77,7 @@ inline int nest::balloon_windkessel_dynamics(double, const double y[], double f[
  * Default constructors defining default parameters and state
  * ---------------------------------------------------------------- */
     
-nest::balloon_windkessel::Parameters_::Parameters_()
+nest::bold_detector::Parameters_::Parameters_()
   : BW_k    (0.00065     ),  // ms^-1
     BW_gamma(0.00041     ),  // ms^-1
     BW_tau  (980.0       ),  // ms
@@ -120,7 +89,7 @@ nest::balloon_windkessel::Parameters_::Parameters_()
 {
 }
 
-nest::balloon_windkessel::State_::State_(const Parameters_& p)
+nest::bold_detector::State_::State_(const Parameters_& p)
   : r(0)
 {
   //y[V_M] = 0.0; // p.E_L;  // initialize to reversal potential
@@ -130,14 +99,14 @@ nest::balloon_windkessel::State_::State_(const Parameters_& p)
   y[3] = 1.0;
 }
 
-nest::balloon_windkessel::State_::State_(const State_& s)
+nest::bold_detector::State_::State_(const State_& s)
   : r(s.r)
 {
   for ( size_t i = 0 ; i < STATE_VEC_SIZE ; ++i )
     y[i] = s.y[i];
 }
 
-nest::balloon_windkessel::State_& nest::balloon_windkessel::State_::operator=(const State_& s)
+nest::bold_detector::State_& nest::bold_detector::State_::operator=(const State_& s)
 {
   if ( this == &s )  // avoid assignment to self
     return *this;
@@ -149,9 +118,8 @@ nest::balloon_windkessel::State_& nest::balloon_windkessel::State_::operator=(co
   return *this;
 }
 
-nest::balloon_windkessel::Buffers_::Buffers_(balloon_windkessel& n)
-  : logger_(n),
-    s_(0),
+nest::bold_detector::Buffers_::Buffers_(bold_detector& n)
+  : s_(0),
     c_(0),
     e_(0)
 {
@@ -159,9 +127,8 @@ nest::balloon_windkessel::Buffers_::Buffers_(balloon_windkessel& n)
   // init_buffers_().
 }
 
-nest::balloon_windkessel::Buffers_::Buffers_(const Buffers_&, balloon_windkessel& n)
-  : logger_(n),
-    s_(0),
+nest::bold_detector::Buffers_::Buffers_(const Buffers_&, bold_detector& n)
+  : s_(0),
     c_(0),
     e_(0)
 {
@@ -173,78 +140,75 @@ nest::balloon_windkessel::Buffers_::Buffers_(const Buffers_&, balloon_windkessel
  * Parameter and state extractions and manipulation functions
  * ---------------------------------------------------------------- */
 
-void nest::balloon_windkessel::Parameters_::get(DictionaryDatum &d) const
+void nest::bold_detector::Parameters_::get(DictionaryDatum &d) const
 {
   // Dummy function
   def<double>(d,names::BW_k,         BW_k);
 }
 
-void nest::balloon_windkessel::Parameters_::set(const DictionaryDatum& d)
+void nest::bold_detector::Parameters_::set(const DictionaryDatum& d)
 {
   // Dummy function
   updateValue<double>(d,names::BW_k,    BW_k);
 }
 
 
-void nest::balloon_windkessel::State_::get(DictionaryDatum &d) const
+void nest::bold_detector::State_::get(DictionaryDatum &d) const
 {
   //def<double>(d, names::V_m, y[V_M]); // Membrane potential
 }
 
-void nest::balloon_windkessel::State_::set(const DictionaryDatum& d, const Parameters_&)
+void nest::bold_detector::State_::set(const DictionaryDatum& d, const Parameters_&)
 {
   //updateValue<double>(d, names::V_m, y[V_M]);
 }
 
 
 /* ---------------------------------------------------------------- 
- * Default and copy constructor for node, and destructor
+ * Parameter and state extractions and manipulation functions
  * ---------------------------------------------------------------- */
 
-nest::balloon_windkessel::balloon_windkessel()
-  : Archiving_Node(), 
-    P_(), 
-    S_(P_),
-    B_(*this)
-{
-  recordablesMap_.create();
-}
 
-nest::balloon_windkessel::balloon_windkessel(const balloon_windkessel& n)
-  : Archiving_Node(n), 
-    P_(n.P_), 
-    S_(n.S_),
-    B_(n.B_, *this)
+nest::bold_detector::bold_detector()
+  : Node()
+  , device_( *this, RecordingDevice::BOLD_DETECTOR, "dat", true, false, true ) // record time and gid
+  , user_set_precise_times_( false )
+  , has_proxies_( false )
+  , local_receiver_( true )
+  , P_()
+  , S_(P_)
+  , B_(*this)
+
 {
 }
 
-nest::balloon_windkessel::~balloon_windkessel()
+nest::bold_detector::bold_detector( const bold_detector& n )
+  : Node( n )
+  , device_( *this, n.device_ )
+  , user_set_precise_times_( n.user_set_precise_times_ )
+  , has_proxies_( false )
+  , local_receiver_( true )
+  , P_(n.P_) 
+  , S_(n.S_)
+  , B_(n.B_, *this)
+
 {
-  // GSL structs may not have been allocated, so we need to protect destruction
-  if ( B_.s_ ) gsl_odeiv_step_free(B_.s_);
-  if ( B_.c_ ) gsl_odeiv_control_free(B_.c_);
-  if ( B_.e_ ) gsl_odeiv_evolve_free(B_.e_);
 }
 
-/* ---------------------------------------------------------------- 
- * Node initialization functions
- * ---------------------------------------------------------------- */
-
-void nest::balloon_windkessel::init_state_(const Node& proto)
+void
+nest::bold_detector::init_state_( const Node& np )
 {
-  const balloon_windkessel& pr = downcast<balloon_windkessel>(proto);
-  S_ = pr.S_;
+  const bold_detector& sd = dynamic_cast< const bold_detector& >( np );
+  device_.init_state( sd.device_ );
+  init_buffers_();
 }
 
-void nest::balloon_windkessel::init_buffers_()
+void
+nest::bold_detector::init_buffers_()
 {
-  Archiving_Node::clear_history();
+  device_.init_buffers();
 
-  B_.spike_exc_.clear();       // includes resize
-  B_.spike_inh_.clear();       // includes resize
-  B_.currents_.clear();        // includes resize
-
-  B_.logger_.reset();
+  B_.spikes_.clear();
 
   B_.step_ = Time::get_resolution().get_ms();
   B_.IntegrationStep_ = B_.step_;
@@ -271,25 +235,35 @@ void nest::balloon_windkessel::init_buffers_()
   B_.sys_.dimension = State_::STATE_VEC_SIZE;
   B_.sys_.params    = reinterpret_cast<void*>(this);
 
-  B_.I_stim_ = 0.0;
 }
 
-void nest::balloon_windkessel::calibrate()
+void
+nest::bold_detector::calibrate()
 {
-  B_.logger_.init();  // ensures initialization in case mm connected after Simulate
+  if ( !user_set_precise_times_ && network()->get_off_grid_communication() )
+  {
+    device_.set_precise( true, 15 );
+
+    network()->message( SLIInterpreter::M_INFO,
+      "bold_detector::calibrate",
+      String::compose( "Precise neuron models exist: the property precise_times "
+                       "of the %1 with gid %2 has been set to true, precision has "
+                       "been set to 15.",
+                          get_name(),
+                          get_gid() ) );
+  }
+
+  device_.calibrate();
 }
 
-/* ---------------------------------------------------------------- 
- * Update and spike handling functions
- * ---------------------------------------------------------------- */
-
-void nest::balloon_windkessel::update(Time const & origin, const long_t from, const long_t to)
+void
+nest::bold_detector::update( Time const& origin, const long_t from, const long_t to)
 {
-   
+
   assert(to >= 0 && (delay) from < Scheduler::get_min_delay());
   assert(from < to);
   for ( long_t lag = from ; lag < to ; ++lag )
-{
+  {
     double t = 0.0;
     // numerical integration with adaptive step size control:
     // ------------------------------------------------------
@@ -305,17 +279,16 @@ void nest::balloon_windkessel::update(Time const & origin, const long_t from, co
     // simulation intervals
 
     // add incoming spikes
-    S_.y[State_::BW_Z] = B_.spike_exc_.get_value(lag)/Time::get_resolution().get_ms()/P_.N_conn;
-    S_.y[State_::BW_Z] += B_.spike_inh_.get_value(lag)/Time::get_resolution().get_ms()/P_.N_conn;
+    S_.y[State_::BW_Z] = B_.spikes_.get_value(lag)/Time::get_resolution().get_ms()/P_.N_conn;
 
     while ( t < B_.step_ )
     { 
       const int status = gsl_odeiv_evolve_apply(B_.e_, B_.c_, B_.s_, 
-			   &B_.sys_,             // system of ODE
-			   &t,                   // from t
-			    B_.step_,            // to t <= step
-			   &B_.IntegrationStep_, // integration step size
-			    S_.y); 	         // neuronal state
+  			   &B_.sys_,             // system of ODE
+  			   &t,                   // from t
+  			    B_.step_,            // to t <= step
+  			   &B_.IntegrationStep_, // integration step size
+  			    S_.y); 	         // neuronal state
       
    
       if ( status != GSL_SUCCESS )
@@ -323,40 +296,56 @@ void nest::balloon_windkessel::update(Time const & origin, const long_t from, co
     }
 
     //Calculate BOLD signal
-    S_.y[State_::V_M] = P_.BW_V0 * (
+    S_.y[State_::BOLD] = P_.BW_V0 * (
     					7.0*P_.BW_rho*(1.0-S_.y[State_::BW_Q]) 
     					+ 2.0*(1.0-S_.y[State_::BW_Q]/S_.y[State_::BW_V])
     					+ (2.0*P_.BW_rho-0.2)*(1.0-S_.y[State_::BW_V])
     				   );
-    
-    // log state data
-    B_.logger_.record_data(origin.get_steps() + lag);
+    Time stamp = origin + Time::get_resolution()*lag;
+    RateEvent b = RateEvent();
+    b.set_stamp(stamp);
+    b.set_weight(S_.y[State_::BOLD]);
+    b.set_sender_gid(1);
+    device_.record_event(b);
   }
 }
 
-void nest::balloon_windkessel::handle(SpikeEvent & e)
+void
+nest::bold_detector::get_status( DictionaryDatum& d ) const
 {
-  assert(e.get_delay() > 0);
-  if(e.get_weight() > 0.0)
-    B_.spike_exc_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()) - e.get_delay()+ Scheduler::get_min_delay(), // ignore synaptic delay
+  // get the data from the device
+  device_.get_status( d );
+
+  // if we are the device on thread 0, also get the data from the
+  // siblings on other threads
+  if ( local_receiver_ && get_thread() == 0 )
+  {
+    const SiblingContainer* siblings = network()->get_thread_siblings( get_gid() );
+    std::vector< Node* >::const_iterator sibling;
+    for ( sibling = siblings->begin() + 1; sibling != siblings->end(); ++sibling )
+      ( *sibling )->get_status( d );
+  }
+}
+
+void
+nest::bold_detector::set_status( const DictionaryDatum& d )
+{
+  if ( d->known( names::precise_times ) )
+    user_set_precise_times_ = true;
+
+  device_.set_status( d );
+}
+
+void
+nest::bold_detector::handle( SpikeEvent& e )
+{
+  // accept spikes only if detector was active when spike was
+  // emitted
+  if ( device_.is_active( e.get_stamp() ) )
+  {
+    assert( e.get_multiplicity() > 0 );
+
+    B_.spikes_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()) - e.get_delay()+ Scheduler::get_min_delay(), // ignore synaptic delay
 			    e.get_weight() * e.get_multiplicity() );
-  else
-    B_.spike_inh_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
-			 e.get_weight() * e.get_multiplicity() );  // inh. spikes are counted just like exc. spikes
+  }
 }
-
-void nest::balloon_windkessel::handle(CurrentEvent& e)
-{
-  assert(e.get_delay() > 0);
-
-  // add weighted current; HEP 2002-10-04
-  B_.currents_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()), 
-			 e.get_weight() * e.get_current());
-}
-
-void nest::balloon_windkessel::handle(DataLoggingRequest& e)
-{
-  B_.logger_.handle(e);
-}
-
-#endif //HAVE_GSL

@@ -22,7 +22,7 @@ libmodelsmodule_la_SOURCES= \
 		aeif_cond_exp.h aeif_cond_exp.cpp\
 		amat2_psc_exp.h amat2_psc_exp.cpp\
 		binary_neuron.h binary_neuron_impl.h\
-		balloon_windkessel.h balloon_windkessel.cpp\
+		bold_detector.h bold_detector.cpp\
 		cont_delay_connection.h cont_delay_connection_impl.h\
 		correlation_detector.h correlation_detector.cpp\
 		correlomatrix_detector.h correlomatrix_detector.cpp\

@@ -222,6 +222,7 @@ public:
   enum Mode
   {
     SPIKE_DETECTOR,
+    BOLD_DETECTOR,
     MULTIMETER,
     SPIN_DETECTOR
   };

@@ -92,7 +92,7 @@
 #include "multimeter.h"
 #include "correlation_detector.h"
 #include "correlomatrix_detector.h"
-#include "balloon_windkessel.h"
+#include "bold_detector.h"
 
 #include "volume_transmitter.h"
 
@@ -213,7 +213,7 @@ ModelsModule::init( SLIInterpreter* )
   register_model< hh_psc_alpha >( net_, "hh_psc_alpha" );
   register_model< hh_cond_exp_traub >( net_, "hh_cond_exp_traub" );
   register_model< sinusoidal_gamma_generator >( net_, "sinusoidal_gamma_generator" );
-  register_model<balloon_windkessel>(net_,   "balloon_windkessel");
+  register_model< bold_detector >(net_, "bold_detector");
 #endif
 
 #ifdef HAVE_GSL_1_11
