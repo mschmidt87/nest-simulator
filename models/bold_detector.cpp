@@ -48,7 +48,6 @@ inline int nest::balloon_windkessel_dynamics(double, const double y[], double f[
 
   // y[] here is---and must be---the state vector supplied by the integrator,
   // not the state vector in the node, node.S_.y[]. 
-
   // dBW_S/dt
   f[0] = y[S::BW_Z] -node.P_.BW_k*y[S::BW_S] - node.P_.BW_gamma*(y[S::BW_F]-1.0);
 
@@ -301,7 +300,7 @@ nest::bold_detector::update( Time const& origin, const long_t from, const long_t
     					+ 2.0*(1.0-S_.y[State_::BW_Q]/S_.y[State_::BW_V])
     					+ (2.0*P_.BW_rho-0.2)*(1.0-S_.y[State_::BW_V])
     				   );
-    Time stamp = origin + Time::get_resolution()*lag;
+    Time stamp = origin + Time::get_resolution()*(lag+1-Scheduler::get_min_delay());
     RateEvent b = RateEvent();
     b.set_stamp(stamp);
     b.set_weight(S_.y[State_::BOLD]);
@@ -345,7 +344,11 @@ nest::bold_detector::handle( SpikeEvent& e )
   {
     assert( e.get_multiplicity() > 0 );
 
-    B_.spikes_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()) - e.get_delay()+ Scheduler::get_min_delay(), // ignore synaptic delay
+// ignore synaptic delay: first shift the spike to lag 0 
+// and then shift the whole time axis back in the update function
+// because the ring buffer does not features negative indices
+
+    B_.spikes_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()) - (e.get_delay()-1) + Scheduler::get_min_delay(), 
 			    e.get_weight() * e.get_multiplicity() );
   }
 }
