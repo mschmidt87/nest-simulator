@@ -18,6 +18,8 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 
 set( nestutil_sources
+    ann.h ann.cpp
+    ann_util.h
     stopwatch.h stopwatch.cpp
     numerics.h numerics.cpp
     propagator_stability.h propagator_stability.cpp

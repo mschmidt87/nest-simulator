@@ -130,6 +130,7 @@
 #include "spike_dilutor.h"
 #include "static_connection.h"
 #include "static_connection_hom_w.h"
+#include "ann_synapse.h"
 #include "stdp_connection.h"
 #include "stdp_connection_facetshw_hom.h"
 #include "stdp_connection_facetshw_hom_impl.h"
@@ -469,6 +470,11 @@ ModelsModule::init( SLIInterpreter* )
     .model_manager
     .register_connection_model< StaticConnectionHomW< TargetIdentifierIndex > >(
       "static_synapse_hom_w_hpc" );
+
+  kernel()
+    .model_manager
+    .register_connection_model< ANNSynapse< TargetIdentifierPtrRport > >(
+      "ann_synapse" );
 
   /* BeginDocumentation
      Name: gap_junction - Connection model for gap junctions.
