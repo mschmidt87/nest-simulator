@@ -70,9 +70,10 @@ namespace nest
 class CommonPropertiesANN : public CommonSynapseProperties
 {
 public:
-  // data members common to all connections
+  // ANN ann_;
   ANN ann_;
 
+  
 public:
   /**
    * Default constructor.
@@ -81,6 +82,15 @@ public:
   CommonPropertiesANN()
     : CommonSynapseProperties()
   {
+    // data members common to all connections
+    const size_t n_inputs = 2;
+    const size_t n_layers = 3;
+  
+    std::vector< size_t > n_units_per_layer ( n_layers );
+    n_units_per_layer[ 0 ] = 10;
+    n_units_per_layer[ 1 ] = 10;
+    n_units_per_layer[ 2 ] = 1;
+    ann_ = ANN( n_inputs, n_layers, n_units_per_layer );
   }
 
   /**
@@ -90,7 +100,7 @@ public:
   get_status( DictionaryDatum& d ) const
   {
     CommonSynapseProperties::get_status( d );
-
+    
     DictionaryDatum weight = new Dictionary();
     DictionaryDatum bias = new Dictionary();
     for ( size_t layer = 0; layer < ann_.weight_.size(); ++layer )
@@ -107,6 +117,9 @@ public:
     }
     ( *d )[ Name( "ann_weight" ) ] = weight;
     ( *d )[ Name( "ann_bias" ) ] = bias;
+    ( *d )[ Name( "ann_n_inputs") ] = ann_.n_inputs_;
+    ( *d )[ Name( "ann_n_layers") ] = ann_.n_layers_;
+    ( *d )[ Name( "ann_n_units_per_layer") ] = ann_.n_units_per_layer_;
   }
 
   /**
@@ -116,6 +129,20 @@ public:
   set_status( const DictionaryDatum& d, ConnectorModel& cm )
   {
     CommonSynapseProperties::set_status( d, cm );
+
+    if ( d->known( "ann_n_inputs" ) )
+    {
+      ann_.n_inputs_ = getValue< long >( d, "ann_n_inputs" );
+    }
+    if ( d->known( "ann_n_layers" ) )
+    {
+      ann_.n_layers_ = getValue< long >( d, "ann_n_layers" );
+    }
+    if ( d->known( "ann_n_units_per_layer" ) )
+    {
+      ann_.n_units_per_layer_ = getValue< std::vector< size_t > >( d, "ann_n_units_per_layer" );
+    }
+    ann_.resize_();
 
     if ( d->known( "ann_weight" ) )
     {
@@ -160,9 +187,10 @@ public:
   // ConnectionBase. This avoids explicit name prefixes in all places these
   // functions are used. Since ConnectionBase depends on the template parameter,
   // they are not automatically found in the base class.
+  using ConnectionBase::get_delay_steps;
+  using ConnectionBase::get_delay;
   using ConnectionBase::get_rport;
   using ConnectionBase::get_target;
-  using ConnectionBase::get_delay_steps;
 
   class ConnTestDummyNode : public ConnTestDummyNodeBase
   {
@@ -221,11 +249,13 @@ public:
   check_connection( Node& s,
     Node& t,
     rport receptor_type,
-    double,
+    double t_lastspike,
     const CommonPropertiesType& )
   {
     ConnTestDummyNode dummy_target;
     ConnectionBase::check_connection_( dummy_target, s, t, receptor_type );
+
+    t.register_stdp_connection( t_lastspike - get_delay() );
   }
 
   /**
@@ -235,11 +265,43 @@ public:
    * \param t_lastspike Time point of last spike emitted
    */
   void
-  send( Event& e, thread t, double, const CommonPropertiesANN& cp )
+  send( Event& e, thread t, double t_lastspike, const CommonPropertiesANN& cp )
   {
-    std::vector< double > input = std::vector< double >( 1 );
+    std::vector< double > input = std::vector< double >( cp.ann_.n_inputs_ );
+    
     input[ 0 ] = weight_;
-    std::vector< double > output = std::vector< double >( 1 );
+
+    Node* target = get_target( t );
+    double dendritic_delay = get_delay();
+
+    double t_spike = e.get_stamp().get_ms();
+    // input[ 1 ] = t_spike - dendritic_delay;
+
+    // get spike history in relevant range (t1, t2] from post-synaptic neuron
+    std::deque< histentry >::iterator start;
+    std::deque< histentry >::iterator finish;
+
+    target->get_history(
+      t_lastspike - dendritic_delay, t_spike - dendritic_delay, &start, &finish );
+    // facilitation due to post-synaptic spikes since last pre-synaptic spike
+    double minus_dt;
+    while ( start != finish )
+    {
+      minus_dt = t_lastspike - ( start->t_ + dendritic_delay );
+      ++start;
+      if ( minus_dt == 0 )
+      {
+	continue;
+      }
+      input[ 1 ] = minus_dt;
+      std::vector< double > output = std::vector< double >( cp.ann_.n_units_per_layer_.back() );
+      cp.ann_.forward( input, output );
+      weight_ = output[ 0 ];
+    }
+
+    // depression due to new pre-synaptic spike
+    input[ 1 ] = target->get_K_value( t_spike - dendritic_delay );
+    std::vector< double > output = std::vector< double >( cp.ann_.n_units_per_layer_.back() );
     cp.ann_.forward( input, output );
     weight_ = output[ 0 ];
 
