@@ -84,7 +84,7 @@ ANN::forward( const std::vector< double >& input, std::vector< double >& output 
     const std::vector< double >& pre_activities = layer == 0 ? input : activities[ layer - 1 ];
     mv( weight_[ layer ], pre_activities, activities[ layer ] );
     vadd( activities[ layer ], bias_[ layer ], activities[ layer ] );
-    if (layer == n_layers_ - 1)
+    if (layer != n_layers_ - 1)
     {
       for ( size_t unit = 0; unit < activities[ layer ].size(); ++unit )
       {
