@@ -119,7 +119,12 @@ public:
     ( *d )[ Name( "ann_bias" ) ] = bias;
     ( *d )[ Name( "ann_n_inputs") ] = ann_.n_inputs_;
     ( *d )[ Name( "ann_n_layers") ] = ann_.n_layers_;
-    ( *d )[ Name( "ann_n_units_per_layer") ] = ann_.n_units_per_layer_;
+    // can only add intvectors to dictionary; use temporary container
+    // and copying to work around this
+    initialize_property_intvector( d, "ann_n_units_per_layer" );
+    std::vector< long > n_units_per_layer;
+    n_units_per_layer.insert( n_units_per_layer.begin(), ann_.n_units_per_layer_.begin(), ann_.n_units_per_layer_.end() );
+    append_property( d, "ann_n_units_per_layer", n_units_per_layer );
   }
 
   /**
@@ -140,7 +145,11 @@ public:
     }
     if ( d->known( "ann_n_units_per_layer" ) )
     {
-      ann_.n_units_per_layer_ = getValue< std::vector< size_t > >( d, "ann_n_units_per_layer" );
+      // getValue is only defined for vector< long >; use temporary
+      // container and copying to work around this
+      std::vector< long > n_units_per_layer = getValue< std::vector< long > >( d, "ann_n_units_per_layer" );
+      ann_.n_units_per_layer_.clear();
+      ann_.n_units_per_layer_.insert( ann_.n_units_per_layer_.begin(), n_units_per_layer.begin(), n_units_per_layer.end() );
     }
     ann_.resize_();
 
