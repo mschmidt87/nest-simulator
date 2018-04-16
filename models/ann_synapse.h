@@ -186,11 +186,20 @@ template < typename targetidentifierT >
 class ANNSynapse : public Connection< targetidentifierT >
 {
   double weight_;
+  double tau_plus_;
+  double Kplus_;
 
 public:
   // this line determines which common properties to use
   typedef CommonPropertiesANN CommonPropertiesType;
   typedef Connection< targetidentifierT > ConnectionBase;
+
+  /**
+   * Default Constructor.
+   * Sets default values for all parameters. Needed by GenericConnectorModel.
+   */
+  ANNSynapse();
+
 
   // Explicitly declare all methods inherited from the dependent base
   // ConnectionBase. This avoids explicit name prefixes in all places these
@@ -262,6 +271,7 @@ public:
     const CommonPropertiesType& )
   {
     ConnTestDummyNode dummy_target;
+    
     ConnectionBase::check_connection_( dummy_target, s, t, receptor_type );
 
     t.register_stdp_connection( t_lastspike - get_delay() );
@@ -278,13 +288,11 @@ public:
   {
     std::vector< double > input = std::vector< double >( cp.ann_.n_inputs_ );
     
-    input[ 0 ] = weight_;
+    double t_spike = e.get_stamp().get_ms();
 
+    
     Node* target = get_target( t );
     double dendritic_delay = get_delay();
-
-    double t_spike = e.get_stamp().get_ms();
-    // input[ 1 ] = t_spike - dendritic_delay;
 
     // get spike history in relevant range (t1, t2] from post-synaptic neuron
     std::deque< histentry >::iterator start;
@@ -302,23 +310,29 @@ public:
       {
 	continue;
       }
-      input[ 1 ] = minus_dt;
+      input[ 0 ] = weight_;
+      input[ 1 ] = Kplus_ * std::exp( minus_dt / tau_plus_ );
       std::vector< double > output = std::vector< double >( cp.ann_.n_units_per_layer_.back() );
       cp.ann_.forward( input, output );
       weight_ = output[ 0 ];
     }
 
     // depression due to new pre-synaptic spike
-    input[ 1 ] = target->get_K_value( t_spike - dendritic_delay );
+    input[ 1 ] = -1. * target->get_K_value( t_spike - dendritic_delay );
     std::vector< double > output = std::vector< double >( cp.ann_.n_units_per_layer_.back() );
     cp.ann_.forward( input, output );
     weight_ = output[ 0 ];
 
+    e.set_receiver( *target );
     e.set_weight( weight_ );
+    // use accessor functions (inherited from Connection< >) to obtain delay in
+    // steps and rport
     e.set_delay( get_delay_steps() );
-    e.set_receiver( *get_target( t ) );
     e.set_rport( get_rport() );
     e();
+
+    Kplus_ = Kplus_ * std::exp( ( t_lastspike - t_spike ) / tau_plus_ ) + 1.0;
+    
   }
 
   void
@@ -328,6 +342,13 @@ public:
   }
 };
 
+template < typename targetidentifierT >
+ANNSynapse< targetidentifierT >::ANNSynapse()
+  : ConnectionBase()
+  , weight_( 1.0 )
+  , tau_plus_( 20.0 )
+{
+}
 
 template < typename targetidentifierT >
 void
@@ -336,6 +357,7 @@ ANNSynapse< targetidentifierT >::get_status(
 {
   ConnectionBase::get_status( d );
   def< double >( d, names::weight, weight_ );
+  def< double >( d, names::tau_plus, tau_plus_ );
   def< long >( d, names::size_of, sizeof( *this ) );
 }
 
@@ -346,6 +368,7 @@ ANNSynapse< targetidentifierT >::set_status( const DictionaryDatum& d,
 {
   ConnectionBase::set_status( d, cm );
   updateValue< double >( d, names::weight, weight_ );
+  updateValue< double >( d, names::tau_plus, tau_plus_ );
 }
 
 
