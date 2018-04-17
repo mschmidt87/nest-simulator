@@ -318,6 +318,7 @@ public:
     }
 
     // depression due to new pre-synaptic spike
+    input[ 0 ] = weight_;
     input[ 1 ] = -1. * target->get_K_value( t_spike - dendritic_delay );
     std::vector< double > output = std::vector< double >( cp.ann_.n_units_per_layer_.back() );
     cp.ann_.forward( input, output );
