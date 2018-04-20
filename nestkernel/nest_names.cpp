@@ -503,6 +503,7 @@ const Name withtime( "withtime" );
 const Name withweight( "withweight" );
 const Name Wmax( "Wmax" );
 const Name Wmin( "Wmin" );
+const Name wout( "wout");
 
 const Name x( "x" );
 

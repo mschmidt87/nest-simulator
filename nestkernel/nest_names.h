@@ -524,6 +524,7 @@ extern const Name withtime;
 extern const Name withweight;
 extern const Name Wmax;
 extern const Name Wmin;
+extern const Name wout;
 
 extern const Name x;
 
