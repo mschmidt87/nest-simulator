@@ -132,6 +132,7 @@
 #include "static_connection.h"
 #include "static_connection_hom_w.h"
 #include "stdp_connection.h"
+#include "stdp_sympy_connection.h"
 #include "stdp_connection_facetshw_hom.h"
 #include "stdp_connection_facetshw_hom_impl.h"
 #include "stdp_connection_hom.h"
@@ -521,6 +522,10 @@ ModelsModule::init( SLIInterpreter* )
     .register_connection_model< STDPConnection< TargetIdentifierIndex > >(
       "stdp_synapse_hpc" );
 
+  kernel()
+    .model_manager
+    .register_connection_model< STDPSympyConnection< TargetIdentifierPtrRport > >(
+      "stdp_sympy_synapse" );
 
   /** @BeginDocumentation
      Name: stdp_pl_synapse_hom_hpc - Variant of stdp_pl_synapse_hom with low

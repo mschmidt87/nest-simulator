@@ -533,6 +533,20 @@ function( NEST_PROCESS_WITH_BOOST )
   endif ()
 endfunction()
 
+function( NEST_PROCESS_WITH_SYMPYCPP )
+  if ( with-sympycpp )
+    set( HAVE_SYMPYCPP ON PARENT_SCOPE )
+    set( SYMPYCPP_ROOT_DIR "${with-sympycpp}" )
+    find_path( SYMPYCPP_INCLUDE_DIR NAMES parser.h HINTS ${SYMPYCPP_ROOT_DIR}/include/ )
+    set( SYMPYCPP_INCLUDE_DIRS "${SYMPYCPP_INCLUDE_DIR}" )
+    find_library( SYMPYCPP_LIBRARY NAMES parser HINTS ${SYMPYCPP_ROOT_DIR}/lib/sympycpp/ )
+    set( SYMPYCPP_LIBRARIES "${SYMPYCPP_LIBRARY}" )
+    mark_as_advanced( SYMPYCPP_ROOT_DIR SYMPYCPP_INCLUDE_DIR SYMPY_LIBRARY )
+  else ()
+    set( HAVE_SYMPYCPP OFF PARENT_SCOPE )
+  endif ()
+endfunction()
+
 function( NEST_DEFAULT_MODULES )
     # requires HAVE_LIBNEUROSIM set
     # Static modules
