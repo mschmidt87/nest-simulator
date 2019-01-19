@@ -262,13 +262,13 @@ STDPSympyConnection< targetidentifierT >::send( Event& e,
     // start->t_ > t_lastspike - dendritic_delay, i.e. minus_dt < 0
     assert( minus_dt < -1.0 * kernel().connection_manager.get_stdp_eps() );
     // weight_ = facilitate_( weight_, Kplus_ * std::exp( minus_dt / tau_plus_ ) );
-    weight_ += lambda_ * Wmax_ * parser_facilitate_.eval( { weight_, Kplus_ * std::exp( minus_dt / tau_plus_ ) } );
+    weight_ += lambda_ * Wmax_ * parser_facilitate_.eval( { weight_ / Wmax_, Kplus_ * std::exp( minus_dt / tau_plus_ ) } );
   }
 
   // depression due to new pre-synaptic spike
   // weight_ =
   //   depress_( weight_, target->get_K_value( t_spike - dendritic_delay ) );
-  weight_ += lambda_ * Wmax_ * parser_depress_.eval( { weight_, target->get_K_value( t_spike - dendritic_delay ) } );
+  weight_ += lambda_ * Wmax_ * parser_depress_.eval( { weight_ / Wmax_, target->get_K_value( t_spike - dendritic_delay ) } );
 
   e.set_receiver( *target );
   e.set_weight( weight_ );
