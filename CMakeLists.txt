@@ -50,7 +50,7 @@ set( external-modules OFF CACHE STRING "External NEST modules to be linked in, s
 set( with-libneurosim OFF CACHE STRING "Request the use of libneurosim. Optionally give the directory, where libneurosim is installed. [default=OFF]" )
 set( with-music OFF CACHE STRING "Request the use of MUSIC. Optionally give the directory, where MUSIC is installed. [default=OFF]" )
 set( with-boost OFF CACHE STRING "Request compilation with Boost, required for C++ testsuite. Optionally give directory with Boost installation. [default=OFF]" )
-set( with-sympycpp OFF CACHE STRING "Request compilation with SympyCPP. Optionally give directory with SympyCPP installation. [default=OFF]" )
+set( with-symengine OFF CACHE STRING "Request compilation with SymEngine. Optionally give directory with SymEngine installation. [default=OFF]" )
 
 # set parallelization scheme
 set( with-mpi OFF CACHE STRING "Request compilation with MPI. Optionally give directory with MPI installation. [default=OFF]" )
@@ -166,7 +166,7 @@ nest_process_with_mpi()
 nest_process_with_libneurosim()
 nest_process_with_music()
 nest_process_with_boost()
-nest_process_with_sympycpp()
+nest_process_with_symengine()
 
 nest_get_color_flags()
 set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${NEST_C_COLOR_FLAGS}" )

@@ -148,8 +148,8 @@
 /* define for STL vector capacity doubling strategy */
 #cmakedefine HAVE_STL_VECTOR_CAPACITY_DOUBLING 1
 
-/* Sympycpp support enabled? */
-#cmakedefine HAVE_SYMPYCPP 1
+/* SymEngine support enabled? */
+#cmakedefine HAVE_SYMENGINE 1
 
 /* Tics per millisecond specified? */
 #cmakedefine HAVE_TICS_PER_MS 1

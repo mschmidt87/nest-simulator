@@ -37,11 +37,43 @@
 #include "dictdatum.h"
 #include "dictutils.h"
 
-// Include from SympyCPP
-#include "sympycpp_parser.h"
+// Includes from SymEngine
+#include "symengine/eval_double.h"
+#include "symengine/real_double.h"
+#include "symengine/parser.h"
+#include "symengine/symbol.h"
+#include "symengine/subs.h"
 
 namespace nest
 {
+
+class SympyExpr
+{
+private:
+  SymEngine::RCP< const SymEngine::Basic > expr_;
+  std::vector< SymEngine::RCP< const SymEngine::Basic > > symbols_;
+
+public:
+  void parse( const std::string expr, const size_t n_inputs )
+  {
+    expr_ = SymEngine::parse( expr );
+
+    for ( size_t i = 0; i < n_inputs; ++i )
+    {
+      symbols_.push_back( SymEngine::symbol( "x_" + std::to_string( i ) ) );
+    }
+  }
+
+  double eval( const std::vector< double > args ) const
+  {
+    SymEngine::RCP< const SymEngine::Basic > local_expr = expr_;
+    for ( size_t i = 0; i < args.size(); ++i )
+    {
+      local_expr = SymEngine::subs( local_expr, { { symbols_[ i ], SymEngine::real_double( args [ i ] ) } } );
+    }
+    return SymEngine::eval_double( *local_expr );
+  }
+};
 
 /** @BeginDocumentation
 Name: stdp_synapse - Synapse type for spike-timing dependent
@@ -206,10 +238,10 @@ private:
   double mu_minus_;
   double Wmax_;
   double Kplus_;
-  sympycpp::Parser parser_depress_;
-  sympycpp::Parser parser_facilitate_;
-  std::string expr_depress_;
-  std::string expr_facilitate_;
+  SympyExpr expr_depress_;
+  SympyExpr expr_facilitate_;
+  std::string str_expr_depress_;
+  std::string str_expr_facilitate_;
   long n_inputs_;
 
   double t_lastspike_;
@@ -262,13 +294,13 @@ STDPSympyConnection< targetidentifierT >::send( Event& e,
     // start->t_ > t_lastspike - dendritic_delay, i.e. minus_dt < 0
     assert( minus_dt < -1.0 * kernel().connection_manager.get_stdp_eps() );
     // weight_ = facilitate_( weight_, Kplus_ * std::exp( minus_dt / tau_plus_ ) );
-    weight_ += lambda_ * Wmax_ * parser_facilitate_.eval( { weight_ / Wmax_, Kplus_ * std::exp( minus_dt / tau_plus_ ) } );
+    weight_ += lambda_ * Wmax_ * expr_facilitate_.eval( { weight_ / Wmax_, Kplus_ * std::exp( minus_dt / tau_plus_ ) } );
   }
 
   // depression due to new pre-synaptic spike
   // weight_ =
   //   depress_( weight_, target->get_K_value( t_spike - dendritic_delay ) );
-  weight_ += lambda_ * Wmax_ * parser_depress_.eval( { weight_ / Wmax_, target->get_K_value( t_spike - dendritic_delay ) } );
+  weight_ += lambda_ * Wmax_ * expr_depress_.eval( { weight_ / Wmax_, target->get_K_value( t_spike - dendritic_delay ) } );
 
   e.set_receiver( *target );
   e.set_weight( weight_ );
@@ -295,10 +327,10 @@ STDPSympyConnection< targetidentifierT >::STDPSympyConnection()
   , mu_minus_( 1.0 )
   , Wmax_( 100.0 )
   , Kplus_( 0.0 )
-  , parser_depress_( sympycpp::Parser() )
-  , parser_facilitate_( sympycpp::Parser() )
-  , expr_depress_( "" )
-  , expr_facilitate_( "" )
+  , expr_depress_( SympyExpr() )
+  , expr_facilitate_( SympyExpr() )
+  , str_expr_depress_( "" )
+  , str_expr_facilitate_( "" )
   , n_inputs_( 0 )
   , t_lastspike_( 0.0 )
 {
@@ -316,10 +348,10 @@ STDPSympyConnection< targetidentifierT >::STDPSympyConnection(
   , mu_minus_( rhs.mu_minus_ )
   , Wmax_( rhs.Wmax_ )
   , Kplus_( rhs.Kplus_ )
-  , parser_depress_( rhs.parser_depress_ )
-  , parser_facilitate_( rhs.parser_facilitate_ )
   , expr_depress_( rhs.expr_depress_ )
   , expr_facilitate_( rhs.expr_facilitate_ )
+  , str_expr_depress_( rhs.str_expr_depress_ )
+  , str_expr_facilitate_( rhs.str_expr_facilitate_ )
   , n_inputs_( rhs.n_inputs_ )
   , t_lastspike_( rhs.t_lastspike_ )
 {
@@ -339,8 +371,8 @@ STDPSympyConnection< targetidentifierT >::get_status( DictionaryDatum& d ) const
   def< double >( d, names::Wmax, Wmax_ );
   def< long >( d, names::size_of, sizeof( *this ) );
 
-  def< std::string >( d, "expr_depress", expr_depress_ );
-  def< std::string >( d, "expr_facilitate", expr_facilitate_ );
+  def< std::string >( d, "expr_depress", str_expr_depress_ );
+  def< std::string >( d, "expr_facilitate", str_expr_facilitate_ );
   def< long >( d, "n_inputs", n_inputs_ );
 }
 
@@ -357,12 +389,12 @@ STDPSympyConnection< targetidentifierT >::set_status( const DictionaryDatum& d,
   updateValue< double >( d, names::mu_plus, mu_plus_ );
   updateValue< double >( d, names::mu_minus, mu_minus_ );
   updateValue< double >( d, names::Wmax, Wmax_ );
-  updateValue< std::string >( d, "expr_depress", expr_depress_ );
-  updateValue< std::string >( d, "expr_facilitate", expr_facilitate_ );
+  updateValue< std::string >( d, "expr_depress", str_expr_depress_ );
+  updateValue< std::string >( d, "expr_facilitate", str_expr_facilitate_ );
   updateValue< long >( d, "n_inputs", n_inputs_ );
 
-  parser_depress_.parse( expr_depress_, n_inputs_ );
-  parser_facilitate_.parse( expr_facilitate_, n_inputs_ );
+  expr_depress_.parse( str_expr_depress_, n_inputs_ );
+  expr_facilitate_.parse( str_expr_facilitate_, n_inputs_ );
 
   // check if weight_ and Wmax_ has the same sign
   if ( not( ( ( weight_ >= 0 ) - ( weight_ < 0 ) )
