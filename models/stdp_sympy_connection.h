@@ -213,21 +213,26 @@ public:
   }
 
 private:
-  // double
-  // facilitate_( double w, double kplus )
-  // {
-  //   double norm_w = ( w / Wmax_ )
-  //     + ( lambda_ * std::pow( 1.0 - ( w / Wmax_ ), mu_plus_ ) * kplus );
-  //   return norm_w < 1.0 ? norm_w * Wmax_ : Wmax_;
-  // }
+  double
+  facilitate_( double w, double kplus )
+  {
+    // double norm_w = ( w / Wmax_ )
+    //   + ( lambda_ * std::pow( 1.0 - ( w / Wmax_ ), mu_plus_ ) * kplus );
+    // weight_ += lambda_ * Wmax_ * expr_facilitate_.eval( { weight_ / Wmax_, Kplus_ * std::exp( minus_dt / tau_plus_ ) } );
+    double delta_w = expr_facilitate_.eval( { weight_ / Wmax_, kplus } );
+    double norm_w = ( w / Wmax_ ) + lambda_ * delta_w;
+    return norm_w < 1.0 ? norm_w * Wmax_ : Wmax_;
+  }
 
-  // double
-  // depress_( double w, double kminus )
-  // {
-  //   double norm_w = ( w / Wmax_ )
-  //     - ( alpha_ * lambda_ * std::pow( w / Wmax_, mu_minus_ ) * kminus );
-  //   return norm_w > 0.0 ? norm_w * Wmax_ : 0.0;
-  // }
+  double
+  depress_( double w, double kminus )
+  {
+    // double norm_w = ( w / Wmax_ )
+    //   - ( alpha_ * lambda_ * std::pow( w / Wmax_, mu_minus_ ) * kminus );
+    double delta_w = expr_depress_.eval( { weight_ / Wmax_, kminus } );
+    double norm_w = ( w / Wmax_ ) - alpha_ * lambda_ * delta_w;
+    return norm_w > 0.0 ? norm_w * Wmax_ : 0.0;
+  }
 
   // data members of each connection
   double weight_;
@@ -293,14 +298,12 @@ STDPSympyConnection< targetidentifierT >::send( Event& e,
     // get_history() should make sure that
     // start->t_ > t_lastspike - dendritic_delay, i.e. minus_dt < 0
     assert( minus_dt < -1.0 * kernel().connection_manager.get_stdp_eps() );
-    // weight_ = facilitate_( weight_, Kplus_ * std::exp( minus_dt / tau_plus_ ) );
-    weight_ += lambda_ * Wmax_ * expr_facilitate_.eval( { weight_ / Wmax_, Kplus_ * std::exp( minus_dt / tau_plus_ ) } );
+    weight_ = facilitate_( weight_, Kplus_ * std::exp( minus_dt / tau_plus_ ) );
   }
 
   // depression due to new pre-synaptic spike
-  // weight_ =
-  //   depress_( weight_, target->get_K_value( t_spike - dendritic_delay ) );
-  weight_ += lambda_ * Wmax_ * expr_depress_.eval( { weight_ / Wmax_, target->get_K_value( t_spike - dendritic_delay ) } );
+  weight_ =
+    depress_( weight_, target->get_K_value( t_spike - dendritic_delay ) );
 
   e.set_receiver( *target );
   e.set_weight( weight_ );
