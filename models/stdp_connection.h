@@ -188,10 +188,9 @@ private:
   double
   depress_( double w, double kminus )
   {
-    // double norm_w = ( w / Wmax_ )
-    //   - ( alpha_ * lambda_ * std::pow( w / Wmax_, mu_minus_ ) * kminus );
-    // return norm_w > 0.0 ? norm_w * Wmax_ : 0.0;
-    return w;
+    double norm_w = ( w / Wmax_ )
+      - ( alpha_ * lambda_ * std::pow( w / Wmax_, mu_minus_ ) * kminus );
+    return norm_w > 0.0 ? norm_w * Wmax_ : 0.0;
   }
 
   // data members of each connection
