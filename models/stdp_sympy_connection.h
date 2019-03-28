@@ -71,7 +71,7 @@ public:
     {
       local_expr = SymEngine::subs( local_expr, { { symbols_[ i ], SymEngine::real_double( args [ i ] ) } } );
     }
-    return SymEngine::eval_double( *local_expr );
+    return std::real(SymEngine::eval_complex_double( *local_expr ));
   }
 };
 
